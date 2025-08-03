@@ -1,12 +1,16 @@
 import { Router } from "express";
-import { profile, updateUser } from "./user.service.js";
+import { getNewLoginCredentials, profile, updateUser } from "./user.service.js";
 import { authentication } from "../../middleware/auth.middleware.js";
+import { tokenKind } from "../../utils/security/token.security.js";
 
-const router = Router()
+const router = Router();
 
-router.use(authentication())
+router.get("/", authentication(), profile);
+router.get(
+  "/refresh-token",
+  authentication({ tokenType: tokenKind.refresh }),
+  getNewLoginCredentials
+);
+router.patch("/update", authentication(), updateUser);
 
-router.get("/", profile)
-router.patch("/update", updateUser)
-
-export default router
+export default router;

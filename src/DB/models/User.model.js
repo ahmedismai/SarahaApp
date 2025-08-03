@@ -1,55 +1,94 @@
 import mongoose from "mongoose";
 
-export  let genderEnum = {Male:"Male" , Female:"Female"}
-export  let roleEnum = {user:"User" , admin:"Admin"}
-const userSchema = new mongoose.Schema({
-    firstName:{
-        type:String,
-        required: true, 
-        minLength: 2 ,
-        maxLength: [20 , "firstName max length is 20 char and you have entered {VALUE}"]
+export let genderEnum = { Male: "Male", Female: "Female" };
+export let roleEnum = { user: "User", admin: "Admin" };
+export let providerEnum = { system: "system", google: "google" };
+const userSchema = new mongoose.Schema(
+  {
+    firstName: {
+      type: String,
+      required: true,
+      minLength: 2,
+      maxLength: [
+        20,
+        "firstName max length is 20 char and you have entered {VALUE}",
+      ],
     },
-    lastName:{
-        type:String,
-        required: true, 
-        minLength: 2 ,
-        maxLength: [20 , "lastName max length is 20 char and you have entered {VALUE}"]
+    lastName: {
+      type: String,
+      required: true,
+      minLength: 2,
+      maxLength: [
+        20,
+        "lastName max length is 20 char and you have entered {VALUE}",
+      ],
     },
-    email:{
-        type:String, 
-        required:true, 
-        unique:true
-    }, 
-    password:{
-        type:String, 
-        required:true
+    email: {
+      type: String,
+      required: true,
+      unique: true,
     },
-    gender:{
-        type:String,
-        enum:{values:Object.values(genderEnum) , message:`gender only allow ${Object.values(genderEnum)}`},
-        default:genderEnum.Male
+    password: {
+      type: String,
+      required: function () {
+        return this.provider === providerEnum.system ? true : false;
+      },
     },
-    role:{
-        type:String,
-        enum:{values:Object.values(roleEnum) , message:`Role only allow ${Object.values(roleEnum)}`},
-        default:genderEnum.user
+    phone: {
+      type: String,
+      required: function () {
+        return this.provider === providerEnum.system ? true : false;
+      },
     },
-    phone: String,
-    confirmEmail:Date 
-},
-{
-    timestamps:true,
-    toObject:{virtuals: true},
-    toJSON:{virtuals:true}
-}
-)
+    gender: {
+      type: String,
+      enum: {
+        values: Object.values(genderEnum),
+        message: `gender only allow ${Object.values(genderEnum)}`,
+      },
+      default: genderEnum.Male,
+    },
+    role: {
+      type: String,
+      enum: {
+        values: Object.values(roleEnum),
+        message: `Role only allow ${Object.values(roleEnum)}`,
+      },
+      default: roleEnum.user,
+    },
 
-userSchema.virtual("fullName").set(function (value){
-    const [firstName, lastName] = value?.split(" ") || []
-    this.set({firstName, lastName})
-}).get(function() {
-    return this.firstName + " " + this.lastName
-})
+    provider: {
+      type: String,
+      enum: Object.values(providerEnum),
+      default: providerEnum.system,
+    },
+    confirmEmail: Date,
+    confirmEmailOtp: String,
+    confirmEmailOtpExpiresAt: { type: Date },
+    confirmEmailOtpAttempts: { type: Number, default: 0 },
+    confirmEmailOtpBanExpiresAt: { type: Date },
+    lastOtpSentAt: { type: Date },
+    otpRequestAttempts: { type: Number, default: 0 },
+    otpRequestBanExpiresAt: { type: Date },
+    picture: String,
+  },
+  {
+    timestamps: true,
+    toObject: { virtuals: true },
+    toJSON: { virtuals: true },
+  }
+);
 
-export const userModel = mongoose.models.User || mongoose.model("User", userSchema)
-userModel.syncIndexes()
+userSchema
+  .virtual("fullName")
+  .set(function (value) {
+    const [firstName, lastName] = value?.split(" ") || [];
+    this.set({ firstName, lastName });
+  })
+  .get(function () {
+    return this.firstName + " " + this.lastName;
+  });
+
+export const userModel =
+  mongoose.models.User || mongoose.model("User", userSchema);
+userModel.syncIndexes();

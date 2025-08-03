@@ -1,42 +1,49 @@
 import { findByIdAndUpdate, findOne } from "../../DB/db.service.js";
-import { userModel } from "../../DB/models/User.model.js";
+import { roleEnum, userModel } from "../../DB/models/User.model.js";
 import { asyncHandler, successResponse } from "../../utils/response.js";
-import { decryptEncryption, generateEncryption } from "../../utils/security/encryption.security.js";
+import {
+  decryptEncryption,
+  generateEncryption,
+} from "../../utils/security/encryption.security.js";
+import { getLoginCredentials } from "../../utils/security/token.security.js";
 
+export const profile = asyncHandler(async (req, res, next) => {
+  {
+    req.user.phone = await decryptEncryption({ cipherText: req.user.phone });
+    return successResponse({ res, data: { user: req.user } });
+  }
+});
 
-export const profile = asyncHandler(
-    async (req, res , next ) => {
-        {
-            req.user.phone = await decryptEncryption({cipherText:req.user.phone})
-            return successResponse({res , data:{user: req.user}})
-        }
-    }
-)
-
+export const getNewLoginCredentials = asyncHandler(async (req, res, next) => {
+  {
+    const credentials = await getLoginCredentials({ user: req.user });
+    return successResponse({ res, data: { credentials } });
+  }
+});
 
 export const updateUser = asyncHandler(async (req, res, next) => {
-    const {email,  name, phone } = req.body;
+  const { email, name, phone } = req.body;
 
-    if (email && email !== req.user.email) {
-        const existingUser = await findOne({model:userModel, filter:{email} });
-        if (existingUser) {
-        return next(new Error("This email is already in use", { cause: 409 }));
-        }
-        }
-        const updatedUser = await findByIdAndUpdate({
-        model: userModel,
-        id: req.user._id,
-        data: {
-        ...(email && {email}),
-        ...(name && { name }),
-        ...(phone && { phone: generateEncryption({ plainText: phone }) }),
-        },
-        select: "-password", 
-    });
-
-    if (!updatedUser) {
-        return next(new Error("User not found", { cause: 404 }));
+  if (email && email !== req.user.email) {
+    const existingUser = await findOne({ model: userModel, filter: { email } });
+    if (existingUser) {
+      return next(new Error("This email is already in use", { cause: 409 }));
     }
+  }
+  const updatedUser = await findByIdAndUpdate({
+    model: userModel,
+    id: req.user._id,
+    data: {
+      ...(email && { email }),
+      ...(name && { name }),
+      ...(phone && { phone: generateEncryption({ plainText: phone }) }),
+    },
+    select: "-password",
+  });
 
-    return successResponse({ res, data: { user: updatedUser } });
+  if (!updatedUser) {
+    return next(new Error("User not found", { cause: 404 }));
+  }
+
+  return successResponse({ res, data: { user: updatedUser } });
 });
