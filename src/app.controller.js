@@ -14,7 +14,7 @@ import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 export default async function bootstrap() {
   const app = express();
-  const port = process.env.PORT || 5000;
+  const port = process.env.PORT || 3000;
 
   // const whitelist = process.env.ORIGINS.split(",");
 
