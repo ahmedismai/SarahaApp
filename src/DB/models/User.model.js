@@ -40,6 +40,7 @@ const userSchema = new mongoose.Schema(
         return this.provider === providerEnum.system ? true : false;
       },
     },
+    oldPasswords: [String],
     gender: {
       type: String,
       enum: {
@@ -64,13 +65,20 @@ const userSchema = new mongoose.Schema(
     },
     confirmEmail: Date,
     confirmEmailOtp: String,
+    forgotPasswordOTP: String,
     confirmEmailOtpExpiresAt: { type: Date },
     confirmEmailOtpAttempts: { type: Number, default: 0 },
     confirmEmailOtpBanExpiresAt: { type: Date },
     lastOtpSentAt: { type: Date },
     otpRequestAttempts: { type: Number, default: 0 },
     otpRequestBanExpiresAt: { type: Date },
-    picture: String,
+    picture: { secure_url: String, public_id: String },
+    cover: [{ secure_url: String, public_id: String }],
+    deletedAt: Date,
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    restoredAt: Date,
+    restoredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    changeCredentialsTime: Date,
   },
   {
     timestamps: true,
@@ -88,6 +96,12 @@ userSchema
   .get(function () {
     return this.firstName + " " + this.lastName;
   });
+
+userSchema.virtual("messages", {
+  localField: "_id",
+  foreignField: "receiverId",
+  ref: "Message",
+});
 
 export const userModel =
   mongoose.models.User || mongoose.model("User", userSchema);

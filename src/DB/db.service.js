@@ -35,6 +35,19 @@ export const findByIdAndUpdate = async ({
     .select(select)
     .populate(populate);
 };
+export const findOneAndUpdate = async ({
+  model,
+  filter = {},
+  data = {},
+  options = { new: true },
+  select = "",
+  populate = [],
+} = {}) => {
+  return await model
+    .findOneAndUpdate(filter, data, options)
+    .select(select)
+    .populate(populate);
+};
 export const updateOne = async ({
   model,
   filter = {},
@@ -47,4 +60,7 @@ export const updateOne = async ({
     .updateOne(filter, data, options)
     .select?.(select)
     ?.populate?.(populate);
+};
+export const deleteOne = async ({ model, filter = {} } = {}) => {
+  return await model.deleteOne(filter);
 };

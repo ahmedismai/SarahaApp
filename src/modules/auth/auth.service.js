@@ -10,13 +10,19 @@ import {
   generateHash,
 } from "../../utils/security/hash.security.js";
 import { getLoginCredentials } from "../../utils/security/token.security.js";
-import { create, findOne, updateOne } from "./../../DB/db.service.js";
+import {
+  create,
+  findOne,
+  findOneAndUpdate,
+  updateOne,
+} from "./../../DB/db.service.js";
 import { OAuth2Client } from "google-auth-library";
 import { emailEvent } from "../../utils/events/email.event.js";
 import { customAlphabet } from "nanoid";
 
 export const signup = asyncHandler(async (req, res, next) => {
   const { fullName, email, password, phone } = req.body;
+
   if (await findOne({ model: userModel, filter: { email } })) {
     return next(new Error("Email exist"), { cause: 409 });
   }
@@ -57,6 +63,9 @@ export const login = asyncHandler(async (req, res, next) => {
   if (!user.confirmEmail) {
     return next("Please verify your account first");
   }
+  if (user.deletedAt) {
+    return next("This account is deleted ");
+  }
   const match = await comparHash({
     plainText: password,
     hashValue: user.password,
@@ -66,6 +75,92 @@ export const login = asyncHandler(async (req, res, next) => {
   }
   const credentials = await getLoginCredentials({ user });
   return successResponse({ res, data: { credentials } });
+});
+
+export const forgotPasswordOtp = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+  const otp = customAlphabet("0123456789", 6)();
+  const user = await findOneAndUpdate({
+    model: userModel,
+    filter: {
+      email,
+      confirmEmail: { $exists: true },
+      deletedAt: { $exists: false },
+      provider: providerEnum.system,
+    },
+    data: {
+      forgotPasswordOTP: await generateHash({ plainText: otp }),
+    },
+  });
+  if (!user) {
+    return next(new Error("In-valid account", { cause: 404 }));
+  }
+  emailEvent.emit("forgotPasswordOtp", {
+    to: email,
+    subject: "Forgot Password",
+    title: "Reset-password",
+    otp,
+  });
+  return successResponse({ res });
+});
+
+export const verifyPassword = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+  const user = await findOne({
+    model: userModel,
+    filter: {
+      email,
+      confirmEmail: { $exists: true },
+      deletedAt: { $exists: false },
+      forgotPasswordOTP: { $exists: true },
+      provider: providerEnum.system,
+    },
+  });
+  if (!user) {
+    return next(new Error("In-valid account", { cause: 404 }));
+  }
+  if (
+    !(await comparHash({ plainText: otp, hashValue: user.forgotPasswordOTP }))
+  ) {
+    return next(new Error("In-valid otp", { cause: 400 }));
+  }
+
+  return successResponse({ res });
+});
+
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  const { email, otp, password } = req.body;
+  const user = await findOne({
+    model: userModel,
+    filter: {
+      email,
+      confirmEmail: { $exists: true },
+      deletedAt: { $exists: false },
+      forgotPasswordOTP: { $exists: true },
+      provider: providerEnum.system,
+    },
+  });
+  if (!user) {
+    return next(new Error("In-valid account", { cause: 404 }));
+  }
+  if (
+    !(await comparHash({ plainText: otp, hashValue: user.forgotPasswordOTP }))
+  ) {
+    return next(new Error("In-valid otp", { cause: 400 }));
+  }
+
+  await updateOne({
+    model: userModel,
+    filter: {
+      email,
+    },
+    data: {
+      password: await generateHash({ plainText: password }),
+      changeCredentialsTime: new Date(),
+      $unset: { forgotPasswordOTP: 1 },
+    },
+  });
+  return successResponse({ res });
 });
 
 async function verifyGoogleAccount({ idToken } = {}) {

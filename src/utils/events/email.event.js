@@ -13,3 +13,12 @@ emailEvent.on("confirmEmail", async (data) => {
     console.log(`Fail to send email to ${data.to}`);
   });
 });
+emailEvent.on("forgotPasswordOtp", async (data) => {
+  await sendEmail({
+    to: data.to,
+    subject: data.subject || "Forgot Email",
+    html: verifyEmailTemplate({ otp: data.otp, title: data.title }),
+  }).catch((error) => {
+    console.log(`Fail to send email to ${data.to}`);
+  });
+});
