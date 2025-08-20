@@ -70,7 +70,7 @@ export default async function bootstrap() {
 
   app.use(globalErrorHandling);
 
-  app.listen(port, () => {
-    console.log(`Example app listening on port:::${port} `);
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`🚀 Server listening on port:::${port}`);
   });
 }
